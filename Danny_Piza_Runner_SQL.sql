@@ -113,9 +113,12 @@ VALUES
   (12, 'Tomato Sauce');  
 
 
--- codes to answer the various business Questions for Danny
+-- 							SQL Queries to answer the various business Questions for Danny
+
 -- Data clean-up
+
  -- first customer_orders.
+ 
  drop table customer_orders_cleaned;
  CREATE TABLE customer_orders_cleaned SELECT * FROM customer_orders LIMIT 0;  
  
@@ -141,6 +144,7 @@ VALUES
   UPDATE customer_orders_cleaned SET extras = '' where extras = 'null' or extras is NULL;
 
  -- Second runner_orders.
+ 
  DROP TABLE IF EXISTS runner_orders_cleaned;
 CREATE TABLE runner_orders_cleaned SELECT * FROM runner_orders LIMIT 0;
 
@@ -163,22 +167,37 @@ VALUES
  UPDATE runner_orders_cleaned SET Duration = '0 minutes' where cancellation LIKE '%Cancellation';
  UPDATE runner_orders_cleaned SET cancellation = 'No Cancellation' where cancellation = '' or cancellation = 'null' or cancellation is NULL;
 
---  A. PIZZA METRICS
+
+--  									A. PIZZA METRICS
+
 -- 1) How many pizzas were ordered?
-Select count(pizza_id) AS 'No. of Pizzas Ordered' from customer_orders_cleaned;
+
+Select count(pizza_id) AS 'No. of Pizzas Ordered' 
+From customer_orders_cleaned;
 
 -- 2)  How many unique customer orders were made?
-Select count(distinct customer_id) AS 'Unique Customer Orders' from  customer_orders_cleaned;
+
+Select count(distinct customer_id) AS 'Unique Customer Orders' 
+From  customer_orders_cleaned;
 
 -- 3)  How many successful orders were delivered by each runner?
-Select runner_id AS Runner, COUNT(order_id) as 'Successful Orders' FROM runner_orders_cleaned where cancellation = 'No Cancellation' group by Runner;
+
+Select runner_id AS Runner, COUNT(order_id) as 'Successful Orders' 
+From runner_orders_cleaned 
+Where cancellation = 'No Cancellation' 
+Group by Runner;
 
 -- 4)  How many of each type of pizza was delivered?
-SELECT customer_orders_cleaned.pizza_id as 'Pizza Type', count(customer_orders_cleaned.pizza_id) As 'number of Pizza Delivered'
-FROM customer_orders_cleaned
-JOIN runner_orders_cleaned ON customer_orders_cleaned.order_id = runner_orders_cleaned.order_id   where  runner_orders_cleaned.cancellation = 'No Cancellation' group  by customer_orders_cleaned.pizza_id;
+
+SELECT customer_orders_cleaned.pizza_id as 'Pizza Type', 
+	count(customer_orders_cleaned.pizza_id) As 'number of Pizza Delivered'
+From customer_orders_cleaned
+Join runner_orders_cleaned ON customer_orders_cleaned.order_id = runner_orders_cleaned.order_id   
+Where  runner_orders_cleaned.cancellation = 'No Cancellation' 
+Group  by customer_orders_cleaned.pizza_id;
 
 -- 5) How many Vegetarian and Meatlovers were ordered by each customer?
+
 SELECT customer_id,
     SUM(
         CASE
@@ -197,12 +216,15 @@ GROUP BY customer_id
 ORDER BY customer_id; 
 
 -- 6) What was the maximum number of pizzas delivered in a single order?
-SELECT order_id, COUNT(pizza_id) as Delivered_Pizzas_Per_Order
+
+SELECT order_id, 
+	COUNT(pizza_id) as Delivered_Pizzas_Per_Order
 FROM customer_orders_cleaned
 GROUP BY order_id
 ORDER BY Delivered_Pizzas_Per_Order DESC; 
 
 -- 7) For each customer, how many delivered pizzas had at least 1 change and how many had no changes?
+
 select customer_id,
 	SUM(CASE
 		WHEN (
@@ -232,6 +254,7 @@ GROUP BY customer_id
 ORDER BY customer_id;
 
 -- 8) How many pizzas were delivered that had both exclusions and extras?
+
 select customer_orders_cleaned.pizza_id, 
 	sum(CASE
 			WHEN(
@@ -243,57 +266,93 @@ select customer_orders_cleaned.pizza_id,
 		END
 ) AS Total_delivered_Pizza_exclusions_extras
 FROM customer_orders_cleaned
-JOIN runner_orders_cleaned ON customer_orders_cleaned.order_id = runner_orders_cleaned.order_id   where  runner_orders_cleaned.cancellation = 'No Cancellation' 
+JOIN runner_orders_cleaned ON customer_orders_cleaned.order_id = runner_orders_cleaned.order_id   
+Where  runner_orders_cleaned.cancellation = 'No Cancellation' 
 ;
 
 -- 9) What was the total volume of pizzas ordered for each hour of the day?
-	SELECT hour(order_time) AS Hours,count(pizza_id) as total_order_per_hour
-    from customer_orders_cleaned
-    group by Hours
-    order by Hours;
+
+SELECT hour(order_time) AS Hours,count(pizza_id) as total_order_per_hour
+From customer_orders_cleaned
+Group by Hours
+Order by Hours;
     
     
--- 10) What was the volume of orders for each day of the week?	
-	SELECT DAYNAME(order_time) AS days_of_week,count(pizza_id) as total_order_on_Day
-    from customer_orders_cleaned
-    group by days_of_week
-    order by days_of_week;
+-- 10) What was the volume of orders for each day of the week?
+
+SELECT DAYNAME(order_time) AS days_of_week,count(pizza_id) as total_order_on_Day
+From customer_orders_cleaned
+Group by days_of_week
+Order by days_of_week;
     
 
-					-- B Runner and Customer Experience
+					--          B Runner and Customer Experience
 
 -- 1)	How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
-Select registration_date, week(registration_date) as weeks, count( runner_id)  as number_of_runners_registered FROM runners group by weeks ; 
+
+Select registration_date, week(registration_date) as weeks, 
+	count( runner_id)  as number_of_runners_registered 
+FROM runners 
+Group by weeks ; 
 
 -- 2)	What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
-Select runner_id, round(avg(duration))  FROM runner_orders_cleaned where cancellation = 'No Cancellation' group by runner_id;
+
+Select runner_id, round(avg(duration))  
+FROM runner_orders_cleaned 
+Where cancellation = 'No Cancellation' 
+Group by runner_id;
 
 
 -- 3)	Is there any relationship between the number of pizzas and how long the order takes to prepare?
-select customer_orders_cleaned.order_id, count(customer_orders_cleaned.order_id), (customer_orders_cleaned.order_time), runner_orders_cleaned.pickup_time, minute(timediff(runner_orders_cleaned.pickup_time, customer_orders_cleaned.order_time)) as Preparation_time_min
-from customer_orders_cleaned
-join runner_orders_cleaned on customer_orders_cleaned.order_id = runner_orders_cleaned.order_id where runner_orders_cleaned.cancellation = 'No Cancellation' group by order_id order by preparation_time_min DESC;
 
--- from the table generated by the SQL query above, it shows that time taken to prepare the  3 pizzas in order id 4 is 29 minutes as against the lower time for theother orders. this therefore shows that the time taken tp prepare 
+select customer_orders_cleaned.order_id, 
+	count(customer_orders_cleaned.order_id), 
+	(customer_orders_cleaned.order_time), 
+	runner_orders_cleaned.pickup_time, 
+	minute(timediff(runner_orders_cleaned.pickup_time, 
+	customer_orders_cleaned.order_time)) as Preparation_time_min
+From customer_orders_cleaned
+Join runner_orders_cleaned on customer_orders_cleaned.order_id = runner_orders_cleaned.order_id 
+Where runner_orders_cleaned.cancellation = 'No Cancellation' 
+Group by order_id 
+Order by preparation_time_min DESC;
+
+--Answer
+-- from the table generated by the SQL query above, it shows that time taken to prepare the  3 pizzas in order id 4 is 29 minutes as against the lower time for the other orders. this therefore shows that the time taken tp prepare 
 -- a higher number of pizzas will be higher and therefore there is a relationship between number of orders and preparation time.
 
 -- 4)	What was the average distance travelled for each customer?
-select customer_orders_cleaned.customer_id, customer_orders_cleaned.order_id,count(customer_orders_cleaned.order_id) as No_of_Orders, runner_orders_cleaned.runner_id, avg(runner_orders_cleaned.distance)     
-from customer_orders_cleaned
-join runner_orders_cleaned on customer_orders_cleaned.order_id = runner_orders_cleaned.order_id where runner_orders_cleaned.cancellation = 'No Cancellation' group by customer_orders_cleaned.customer_id;
+
+select customer_orders_cleaned.customer_id, 
+	customer_orders_cleaned.order_id,count(customer_orders_cleaned.order_id) as No_of_Orders, 
+	runner_orders_cleaned.runner_id, avg(runner_orders_cleaned.distance)     
+From customer_orders_cleaned
+Join runner_orders_cleaned on customer_orders_cleaned.order_id = runner_orders_cleaned.order_id 
+Where runner_orders_cleaned.cancellation = 'No Cancellation' 
+Group by customer_orders_cleaned.customer_id;
 
 -- 5)	What was the difference between the longest and shortest delivery times for all orders?
+
 select  max_duration - min_duration as delivery_time_diff_in_minutes
-from
+From
 (
-Select max(duration) as max_duration, min(duration) as min_duration from runner_orders_cleaned where cancellation = 'No cancellation'
+Select max(duration) as max_duration, 
+	min(duration) as min_duration 
+	From runner_orders_cleaned 
+	Where cancellation = 'No cancellation'
 ) as duration_calculation;
 
 -- 6)	What was the average speed for each runner for each delivery and do you notice any trend for these values?
-select runner_id, distance, round(distance/duration_in_hours) as speed
-from
-	(Select runner_id, distance, duration/60 as duration_in_hours 
-	from runner_orders_cleaned where cancellation = 'No Cancellation' order by runner_id) as timing;
+
+select runner_id, 
+	distance, round(distance/duration_in_hours) as speed
+From
+	(Select runner_id, 
+	 distance, 
+	 duration/60 as duration_in_hours 
+	From runner_orders_cleaned 
+	 Where cancellation = 'No Cancellation' 
+	 Order by runner_id) as timing;
 
 -- 7)	What is the successful delivery percentage for each runner?
 
@@ -308,8 +367,9 @@ GROUP BY runner_id;
 									-- C. Ingredient Optimisation
 -- 1)	What are the standard ingredients for each pizza?
 
-Select * FROM pizza_names;
-SELECT pizza_names.pizza_id, pizza_names.pizza_name, pizza_recipes.toppings 
+SELECT pizza_names.pizza_id, 
+	pizza_names.pizza_name, 
+	pizza_recipes.toppings 
 FROM pizza_names
 JOIN pizza_recipes  
 ON pizza_names.pizza_id = pizza_recipes.pizza_id;  
@@ -351,44 +411,48 @@ group by pizza_name;
 
 -- 2)	What was the most commonly added extra?
 
+-- First create a table named Order-toppings
 create table order_toppings
 as
-SELECT customer_orders_cleaned.order_id,  SUBSTRING_INDEX(SUBSTRING_INDEX(customer_orders_cleaned.extras, ',', numbers.num), ',', -1) as extra_toppings
-from
+SELECT customer_orders_cleaned.order_id,  
+SUBSTRING_INDEX(SUBSTRING_INDEX(customer_orders_cleaned.extras, ',', numbers.num), ',', -1) as extra_toppings
+From
 	numbers inner join customer_orders_cleaned
     on CHAR_LENGTH(customer_orders_cleaned.extras)
      -CHAR_LENGTH(REPLACE(customer_orders_cleaned.extras, ',', ''))>=numbers.num-1
-     where customer_orders_cleaned.extras <> 'None'
- order by 
-		customer_orders_cleaned.order_id;
+ Where customer_orders_cleaned.extras <> 'None'
+ Order by customer_orders_cleaned.order_id;
 
-select order_toppings.extra_toppings, pizza_toppings.topping_name, count(order_toppings.extra_toppings) as amount_of_usage
-from order_toppings
-inner join pizza_toppings
-on order_toppings.extra_toppings = pizza_toppings.topping_id
+---Query order-toppings to get commonly added extra
 
-group by order_toppings.extra_toppings;
+select order_toppings.extra_toppings, 
+	pizza_toppings.topping_name, 
+	count(order_toppings.extra_toppings) as amount_of_usage
+From order_toppings
+inner Join pizza_toppings on order_toppings.extra_toppings = pizza_toppings.topping_id
+Group by order_toppings.extra_toppings;
+
 
 -- 3)	What was the most common exclusion?
 
+-- First create a table named order_exclusions
 create table order_exclusions
 as
-SELECT customer_orders_cleaned.order_id,  SUBSTRING_INDEX(SUBSTRING_INDEX(customer_orders_cleaned.exclusions, ',', numbers.num), ',', -1) as order_exclusions
-from
+SELECT customer_orders_cleaned.order_id,  
+	SUBSTRING_INDEX(SUBSTRING_INDEX(customer_orders_cleaned.exclusions, ',', numbers.num), ',', -1) as order_exclusions
+From
 	numbers inner join customer_orders_cleaned
     on CHAR_LENGTH(customer_orders_cleaned.exclusions)
      -CHAR_LENGTH(REPLACE(customer_orders_cleaned.exclusions, ',', ''))>=numbers.num-1
-     where customer_orders_cleaned.exclusions <> '0'
- order by 
-		customer_orders_cleaned.order_id;
+ Where customer_orders_cleaned.exclusions <> '0'
+ Order by customer_orders_cleaned.order_id;
 
+---Query order_exclusions to get most common exclusions
 select order_exclusions.order_exclusions, pizza_toppings.topping_name as exclusion_name, count(order_exclusions.order_exclusions) as exclusions_count
 from order_exclusions
-inner join pizza_toppings
-on order_exclusions.order_exclusions = pizza_toppings.topping_id
-
-group by order_exclusions.order_exclusions
-order by exclusions_count DESC;
+inner join pizza_toppings on order_exclusions.order_exclusions = pizza_toppings.topping_id
+Group by order_exclusions.order_exclusions
+Order by exclusions_count DESC;
 
 
 -- 5)	Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
@@ -415,6 +479,7 @@ join pizza_details
 on customer_orders_cleaned.pizza_id = pizza_details.pizza_id;
 
 -- changing the exclusions to the topping names in text
+
 UPDATE full_pizza_details
 		INNER JOIN pizza_toppings ON full_pizza_details.exclusions = cast(pizza_toppings.topping_id as char)
 		SET full_pizza_details.exclusions = pizza_toppings.topping_name
@@ -433,18 +498,7 @@ UPDATE full_pizza_details
 
 
 
-select * from  full_pizza_details;
-Select * from pizza_details;
-Select * from order_exclusions;
-Select * from order_toppings;
-Select * FROM numbers ;
-Select * FROM customer_orders_cleaned ;
-Select * FROM runner_orders_cleaned order by runner_id;
-Select * FROM runners;
-Select * FROM pizza_names;
-Select * FROM pizza_recipes;
-Select * FROM pizza_toppings;
-Select * FROM pizza_ingredients;
+
 
 
 
